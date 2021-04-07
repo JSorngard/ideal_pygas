@@ -240,10 +240,8 @@ if __name__ == '__main__':
 			ax.set_xlabel("t = "+str(i*delta_t)[:4])
 		if animate_stats:
 			#Work out statistical properties
-			sx = np.std(xs)
-			x0 = np.mean(xs)
-			sy = np.std(ys)
-			y0 = np.mean(ys)
+			sx, sy = np.std(xs), np.std(ys)
+			x0, y0 = np.mean(xs), np.mean(ys)
 			ax.set_ylabel("$\\mu=("+str(x0)[:4]+","+str(y0)[:4]+"),\\sigma=("+str(sx)[:4]+","+str(sy)[:4]+"),k_B="+str(kB)[:3]+str(kB)[9:]+"$")
 
 		#Update the particle positions
