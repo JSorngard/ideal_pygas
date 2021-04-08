@@ -2,7 +2,8 @@ from scipy.special import erf
 import multiprocessing as mp
 import numpy as np
 from itertools import cycle
-from numba import njit
+from numba import njit, prange
+from math import sqrt
 
 def maxwell_boltzmann_cdf(v,T=1,m=1,kB=1):
 	"""
@@ -66,53 +67,96 @@ def update_positions(xs,ys,pxs,pys,circle_box,box_size,delta_t,edge_collisions=T
 	Move all particles based on their momentum, reflects their momentum if they
 	are outside the box and returns the new positions of the particles.
 	"""
-	xs += delta_t*pxs
-	ys += delta_t*pys
-
 	torus_factor = 1 if edge_collisions else -1
+	for i in prange(len(xs)):
+		#Move particle
+		xs[i] += delta_t*pxs[i]
+		ys[i] += delta_t*pys[i]
 
+		if circle_box:
+			r = sqrt(xs[i]**2 + ys[i]**2)
+			#If the particle is outside the circle
+			if r > box_size:
+				#Compute the surface normal
+				nx, ny = -xs[i]/r, -ys[i]/r
+				#Move the particle to the edge of the circle
+				#If there are no edge collisions, move it to
+				#the opposite side instead
+				xs[i], ys[i] = -torus_factor*box_size*nx, -torus_factor*box_size*ny
+				if edge_collisions:
+					#Reflect the momenta through the
+					#surface normal
+					dot = pxs[i]*nx + pys[i]*ny
+					pxs[i] -= 2*dot*nx
+					pys[i] -= 2*dot*ny
+		else:
+			#If the particle is outside the box
+			#(in the x direction)
+			if xs[i] < -box_size:
+				#Move it to the edge of the box
+				#or the opposite edge if there are
+				#no collisions
+				xs[i] = -torus_factor*box_size
+				if edge_collisions:
+					#Invert the particle momenta
+					pxs[i] = -pxs[i]
+			elif xs[i] > box_size:
+				xs[i] = torus_factor*box_size
+				if edge_collisions:
+					pxs[i] = -pxs[i]
+
+			#Same in the y-direction
+			if ys[i] < -box_size:
+				ys[i] = -torus_factor*box_size
+				if edge_collisions:
+					pys[i] = -pys[i]
+			elif ys[i] > box_size:
+				ys[i] = torus_factor*box_size
+				if edge_collisions:
+					pys[i] = -pys[i]
+	"""
+	The code in this comment is useful if you do not have numba
+	xs, ys = xs + delta_t*pxs, ys + delta_t*pys
 	if circle_box:
 		#Check which particles are outside the box
 		rs = np.sqrt(xs**2 + ys**2)
-		mask = rs > box_size
+		mask = np.greater(rs, box_size)
 		
 		#Compute surface normal
 		nxs = np.where(mask, -xs/rs, 0)
 		nys = np.where(mask, -ys/rs, 0)
 
 		#Move particles outside the box back inside
-		xs = np.where(mask, -1*torus_factor*box_size*nxs, xs)
-		ys = np.where(mask, -1*torus_factor*box_size*nys, ys)
+		xs = np.where(mask, -torus_factor*box_size*nxs, xs)
+		ys = np.where(mask, -torus_factor*box_size*nys, ys)
 
 		#Reflect their momentum around the normal
+		#if collisions are enabled
 		if edge_collisions:
 			dot = np.where(mask, pxs*nxs + pys*nys, 0)
 			pxs = np.where(mask, pxs - 2*dot*nxs, pxs)
 			pys = np.where(mask, pys - 2*dot*nys, pys)
+
 		
 	else:
-		#Check which particles are outside the box. Place 
-		#them at the edge of the box and reverse their 
+		#Check which particles are outside the box. Reverse their 
 		#momentum if collisions are enabled, otherwise
 		#teleport them to the opposite wall.
 
-		#x-position
-		xmask1 = xs < -box_size
-		xs = np.where(xmask1, -1*torus_factor*box_size, xs)
-		xmask2 = xs > box_size
-		xs = np.where(xmask2, torus_factor*box_size, xs)
-
-		#y-position
-		ymask1 = ys < -box_size
-		ys = np.where(ymask1, -1*torus_factor*box_size, ys)
-		ymask2 = ys > box_size
-		ys = np.where(ymask2, torus_factor*box_size, ys)
-		
-		#momenta
+		#x-direction
+		mask1, mask2 = np.less(xs, -box_size), np.greater(xs, box_size)
+		xs = np.where(mask1, -torus_factor*box_size, xs)
+		xs = np.where(mask2, torus_factor*box_size, xs)
 		if edge_collisions:
-			pxs = np.where(np.logical_or(xmask1, xmask2), -pxs, pxs)
-			pys = np.where(np.logical_or(ymask1, ymask2), -pys, pys)
+			pxs = np.where(np.logical_or(mask1, mask2), -pxs, pxs)
 
+		#y-direction
+		mask1, mask2 = ys < -box_size, ys > box_size
+		ys = np.where(mask1, -torus_factor*box_size, ys)
+		ys = np.where(mask2, torus_factor*box_size, ys)
+		if edge_collisions:
+			pys = np.where(np.logical_or(mask1, mask2), -pys, pys)		
+	"""
 	return xs,ys,pxs,pys
 
 if __name__ == '__main__':
@@ -132,6 +176,7 @@ if __name__ == '__main__':
 	delay = 10								#delay between computing time steps in ms.
 	circle_box = False						#whether to use a circular box.
 	size = 1								#The size of the markers.
+	alpha = 1								#The alpha value of the particles in the plot
 	one_unique = False						#Whether to color one particle in a unique color.
 	animate_stats = True					#Whether to update the statistical properties live.
 	physical = False						#Use physical values of kB, delta_t and m.
@@ -143,7 +188,7 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="Simulates a box filled with ideal gas.")
 	parser.add_argument("-n",required=False,type=int,default=N,help=f"The number of particles to simulate. Defaults to {N}.")
 	parser.add_argument("-dt",required=False,type=float,default=delta_t,help=f"The size of the time step. Defaults to {delta_t}.")
-	parser.add_argument("-l",required=False,type=float,default=box_size,help=f"Half the side length of the box. If -c is present, this is the radius of the box. Defaults to {box_size}.")
+	parser.add_argument("-l",required=False,type=float,default=box_size,help=f"Half the side length of the box. If --circular is present, this is the radius of the box. Defaults to {box_size}.")
 	parser.add_argument("-T",required=False,type=float,default=T,help=f"The temperature of the gas in the box. Defaults to 300 if the --physical flag is set, otherwise 1.")
 	parser.add_argument("-m",required=False,type=float,default=m,help=f"The mass of the particles. Defaults to {m}.")
 	parser.add_argument("-x0",required=False,type=float,default=x0,help=f"The mean in the x direction of the distribution of starting positions. Defaults to {x0}.")
@@ -152,6 +197,7 @@ if __name__ == '__main__':
 	parser.add_argument("-sy",required=False,type=float,default=sy,help=f"The standard deviation in the y direction of the distribution of starting positions. Defaults to {sy}.")
 	parser.add_argument("-d",required=False,type=int,default=delay,help=f"The delay in microseconds between finishing one time step and beginning to work on another. Defaults to {delay}.")
 	parser.add_argument("-s",required=False,type=int,default=size,help=f"The rendered size of the particles. Defaults to {size}.")
+	parser.add_argument("-a",required=False,type=float,default=alpha,help=f"The alpha value of the particles in the plot. Defaults to {alpha}.")
 	parser.add_argument("-f","--frames",required=False,type=int,default=0,help=f"If present and larger than 0 the program will save that number of frames as an animation (at {fps} fps) instead of showing it in a window.")
 	parser.add_argument("--physical",required=False,action="store_true",help="Use the real value of Boltzmann's constant instead of 1, alter the use of the -m flag from entering mass in kg to atomic mass units, and alter the -dt flag from entering in units of seconds to microseconds.")	
 	parser.add_argument("--circular",required=False,action="store_true",help="Use a circular box instead of a square.")
@@ -180,6 +226,9 @@ if __name__ == '__main__':
 	size = args["s"]
 	if size <= 0:
 		raise ValueError("the marker size must be positive")
+	alpha = args["a"]
+	if alpha < 0 or alpha > 1:
+		raise ValueError("the alpha value must be between 0 and 1")
 	physical = args["physical"]
 	if physical:
 		kB = 1.38064852e-23
@@ -221,9 +270,9 @@ if __name__ == '__main__':
 		#color the last particle red and all others blue
 		cs = np.zeros(N)
 		cs[-1]=1
-		sp = ax.scatter(xs,ys,marker=".",s=size,cmap="jet",c=cs)
+		sp = ax.scatter(xs,ys,marker=".",s=size,cmap="jet",c=cs,alpha=alpha)
 	else:
-		sp = ax.scatter(xs,ys,marker=".",s=size,color="k",)
+		sp = ax.scatter(xs,ys,marker=".",s=size,color="k",alpha=alpha)
 	lim = (-box_size,box_size)
 	ax.set_xlim(lim)
 	ax.set_ylim(lim)
