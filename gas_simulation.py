@@ -61,13 +61,15 @@ def maxwell_boltzmann_inverse(p,T=1,m=1,kB=1):
 	return invert_monotone_f(maxwell_boltzmann_cdf,p,args=[T,m,kB])
 
 @njit(parallel=True,nogil=True)
-def update_positions(xs,ys,pxs,pys,circle_box,box_size,delta_t):
+def update_positions(xs,ys,pxs,pys,circle_box,box_size,delta_t,edge_collisions=True):
 	"""
 	Move all particles based on their momentum, reflects their momentum if they
 	are outside the box and returns the new positions of the particles.
 	"""
 	xs += delta_t*pxs
 	ys += delta_t*pys
+
+	torus_factor = 1 if edge_collisions else -1
 
 	if circle_box:
 		#Check which particles are outside the box
@@ -78,33 +80,38 @@ def update_positions(xs,ys,pxs,pys,circle_box,box_size,delta_t):
 		nxs = np.where(mask, -xs/rs, 0)
 		nys = np.where(mask, -ys/rs, 0)
 
-		#Move particles outside the box to the edge
-		xs = np.where(mask, -box_size*nxs, xs)
-		ys = np.where(mask, -box_size*nys, ys)
+		#Move particles outside the box back inside
+		xs = np.where(mask, -1*torus_factor*box_size*nxs, xs)
+		ys = np.where(mask, -1*torus_factor*box_size*nys, ys)
 
 		#Reflect their momentum around the normal
-		dot = np.where(mask, pxs*nxs + pys*nys, 0)
-		pxs = np.where(mask, pxs - 2*dot*nxs, pxs)
-		pys = np.where(mask, pys - 2*dot*nys, pys)
+		if edge_collisions:
+			dot = np.where(mask, pxs*nxs + pys*nys, 0)
+			pxs = np.where(mask, pxs - 2*dot*nxs, pxs)
+			pys = np.where(mask, pys - 2*dot*nys, pys)
 		
 	else:
-		#Check which particles are outside the box
-		#in the x-direction. Place them at the edge of
-		#the box and reverse their x-momentum.
-		mask1 = xs < -box_size
-		xs = np.where(mask1, -box_size, xs)
-		mask2 = xs > box_size
-		xs = np.where(mask2, box_size, xs)
-		mask = np.logical_or(mask1, mask2)
-		pxs = np.where(mask, -pxs, pxs)
+		#Check which particles are outside the box. Place 
+		#them at the edge of the box and reverse their 
+		#momentum if collisions are enabled, otherwise
+		#teleport them to the opposite wall.
 
-		#Same for the y-direction
-		mask1 = ys < -box_size
-		ys = np.where(mask1, -box_size, ys)
-		mask2 = ys > box_size
-		ys = np.where(mask2, box_size, ys)
-		mask = np.logical_or(mask1, mask2)
-		pys = np.where(mask, -pys, pys)
+		#x-position
+		xmask1 = xs < -box_size
+		xs = np.where(xmask1, -1*torus_factor*box_size, xs)
+		xmask2 = xs > box_size
+		xs = np.where(xmask2, torus_factor*box_size, xs)
+
+		#y-position
+		ymask1 = ys < -box_size
+		ys = np.where(ymask1, -1*torus_factor*box_size, ys)
+		ymask2 = ys > box_size
+		ys = np.where(ymask2, torus_factor*box_size, ys)
+		
+		#momenta
+		if edge_collisions:
+			pxs = np.where(np.logical_or(xmask1, xmask2), -pxs, pxs)
+			pys = np.where(np.logical_or(ymask1, ymask2), -pys, pys)
 
 	return xs,ys,pxs,pys
 
@@ -149,6 +156,7 @@ if __name__ == '__main__':
 	parser.add_argument("--physical",required=False,action="store_true",help="Use the real value of Boltzmann's constant instead of 1, alter the use of the -m flag from entering mass in kg to atomic mass units, and alter the -dt flag from entering in units of seconds to microseconds.")	
 	parser.add_argument("--circular",required=False,action="store_true",help="Use a circular box instead of a square.")
 	parser.add_argument("--unique-particle",required=False,action="store_true",help="Color one particle red and all others blue.")
+	parser.add_argument("--no-edge",required=False,action="store_false",help="Use continuous boundary conditions.")
 	parser.add_argument("--verbose",required=False,action="store_true",help="Print out more information.")
 	args = vars(parser.parse_args())
 	
@@ -189,6 +197,7 @@ if __name__ == '__main__':
 		frames = 0
 	circle_box = args["circular"]
 	one_unique = args["unique_particle"]
+	edge_collisions = args["no_edge"]
 	verbose = args["verbose"]
 
 	#--- Initial conditions ---
@@ -228,10 +237,10 @@ if __name__ == '__main__':
 		Updates the plot with new positions for all particles
 		"""
 
-		global xs, ys, pxs, pys, box_size, delta_t, circle_box, animate_stats
+		global xs, ys, pxs, pys, box_size, delta_t, circle_box, animate_stats, edge_collisions
 
 		#Move every particle
-		xs,ys,pxs,pys = update_positions(xs,ys,pxs,pys,circle_box,box_size,delta_t)
+		xs,ys,pxs,pys = update_positions(xs,ys,pxs,pys,circle_box,box_size,delta_t,edge_collisions)
 
 		#Update the plot labels
 		if physical:
