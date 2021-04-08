@@ -114,49 +114,7 @@ def update_positions(xs,ys,pxs,pys,circle_box,box_size,delta_t,edge_collisions=T
 				ys[i] = torus_factor*box_size
 				if edge_collisions:
 					pys[i] = -pys[i]
-	"""
-	The code in this comment is useful if you do not have numba
-	xs, ys = xs + delta_t*pxs, ys + delta_t*pys
-	if circle_box:
-		#Check which particles are outside the box
-		rs = np.sqrt(xs**2 + ys**2)
-		mask = np.greater(rs, box_size)
-		
-		#Compute surface normal
-		nxs = np.where(mask, -xs/rs, 0)
-		nys = np.where(mask, -ys/rs, 0)
 
-		#Move particles outside the box back inside
-		xs = np.where(mask, -torus_factor*box_size*nxs, xs)
-		ys = np.where(mask, -torus_factor*box_size*nys, ys)
-
-		#Reflect their momentum around the normal
-		#if collisions are enabled
-		if edge_collisions:
-			dot = np.where(mask, pxs*nxs + pys*nys, 0)
-			pxs = np.where(mask, pxs - 2*dot*nxs, pxs)
-			pys = np.where(mask, pys - 2*dot*nys, pys)
-
-		
-	else:
-		#Check which particles are outside the box. Reverse their 
-		#momentum if collisions are enabled, otherwise
-		#teleport them to the opposite wall.
-
-		#x-direction
-		mask1, mask2 = np.less(xs, -box_size), np.greater(xs, box_size)
-		xs = np.where(mask1, -torus_factor*box_size, xs)
-		xs = np.where(mask2, torus_factor*box_size, xs)
-		if edge_collisions:
-			pxs = np.where(np.logical_or(mask1, mask2), -pxs, pxs)
-
-		#y-direction
-		mask1, mask2 = ys < -box_size, ys > box_size
-		ys = np.where(mask1, -torus_factor*box_size, ys)
-		ys = np.where(mask2, torus_factor*box_size, ys)
-		if edge_collisions:
-			pys = np.where(np.logical_or(mask1, mask2), -pys, pys)		
-	"""
 	return xs,ys,pxs,pys
 
 if __name__ == '__main__':
