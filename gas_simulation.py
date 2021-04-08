@@ -11,7 +11,7 @@ def maxwell_boltzmann_cdf(v,T=1,m=1,kB=1):
 	density of the Maxwell Boltzmann distribution at
 	velocity v using the given parameters (T,m,kB).
 	"""
-	a = np.sqrt(kB*T/m)
+	a = sqrt(kB*T/m)
 	return np.where(v>0, erf(v/(a*np.sqrt(2)))-np.exp(-v**2/(2*a**2))*np.sqrt(2/np.pi)*v/a, 0)
 
 def invert_monotone_f(f,p,args=[],tol=1e-8):
@@ -268,7 +268,6 @@ if __name__ == '__main__':
 	if verbose:
 		print("Compiling and running simulation")
 	if frames > 0:
-		writer = matplotlib.animation.FFMpegWriter(fps=fps,bitrate=3600)
-		ani.save("gas_simulation.mp4",writer=writer)
+		ani.save("gas_simulation.mp4",writer=matplotlib.animation.FFMpegWriter(fps=fps,bitrate=3600))
 	else:
 		plt.show()
