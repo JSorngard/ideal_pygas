@@ -223,7 +223,8 @@ if __name__ == '__main__':
 	
 	#--- GUI initialization ---
 	fig, ax = plt.subplots()
-	fig.canvas.set_window_title("Ideal gas simulation")
+	manager = plt.get_current_fig_manager()
+	manager.set_window_title("Ideal gas simulation")
 	if one_unique:
 		#color the last particle red and all others blue
 		cs = np.zeros(N)
