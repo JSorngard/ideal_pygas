@@ -212,7 +212,8 @@ if __name__ == '__main__':
 	verbose = args["verbose"]
 
 	if fortran:
-		from gaslib import update_positions as fortran_update_positions
+		from lib import gaslib
+		fortran_update_positions = gaslib.update_positions
 
 	#--- Initial conditions ---
 	#draw positions from normal distribution
@@ -232,9 +233,7 @@ if __name__ == '__main__':
 		ys = np.random.normal(y0,sy,N)
 	#draw velocities from Maxwell-Boltzmann distribution
 	if fortran:
-		from gaslib import draw_from_maxwell_boltzmann
-		pxs, pys = draw_from_maxwell_boltzmann(T,m,kB,N,tol=1e-8)
-
+		pxs, pys = gaslib.draw_from_maxwell_boltzmann(T,m,kB,N,tol=1e-8)
 	else:
 		conditions = [cycle([T]), cycle([m]), cycle([kB])]
 		vs = mp.Pool().starmap(maxwell_boltzmann_inverse,zip(np.random.random(N), *conditions))
