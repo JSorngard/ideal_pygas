@@ -62,7 +62,7 @@ def maxwell_boltzmann_inverse(p,T=1,m=1,kB=1):
 	return invert_monotone_f(maxwell_boltzmann_cdf,p,args=[T,m,kB])
 
 @njit(parallel=True,nogil=True)
-def update_positions(xs,ys,pxs,pys,circle_box,box_size,delta_t,edge_collisions=True):
+def numba_update_positions(xs,ys,pxs,pys,circle_box,box_size,delta_t,edge_collisions=True):
 	"""
 	Move all particles based on their momentum, reflects their momentum if they
 	are outside the box and returns the new positions of the particles.
@@ -161,6 +161,7 @@ if __name__ == '__main__':
 	parser.add_argument("--circular",required=False,action="store_true",help="Use a circular box instead of a square.")
 	parser.add_argument("--unique-particle",required=False,action="store_true",help="Color one particle red and all others blue.")
 	parser.add_argument("--no-edge",required=False,action="store_false",help="Use continuous boundary conditions.")
+	parser.add_argument("--fortran",required=False,action="store_true",help="Use this flag if you have compiled the fortran library, and want to use that instead")
 	parser.add_argument("--verbose",required=False,action="store_true",help="Print out more information.")
 	args = vars(parser.parse_args())
 	
@@ -205,7 +206,11 @@ if __name__ == '__main__':
 	circle_box = args["circular"]
 	one_unique = args["unique_particle"]
 	edge_collisions = args["no_edge"]
+	fortran = args["fortran"]
 	verbose = args["verbose"]
+
+	if fortran:
+		from gaslib import update_positions as fortran_update_positions
 
 	#--- Initial conditions ---
 	#draw positions from normal distribution
@@ -244,10 +249,13 @@ if __name__ == '__main__':
 		Updates the plot with new positions for all particles
 		"""
 
-		global xs, ys, pxs, pys, box_size, delta_t, circle_box, animate_stats, edge_collisions
+		global xs, ys, pxs, pys, box_size, delta_t, circle_box, animate_stats, edge_collisions, fortran, N
 
 		#Move every particle
-		xs,ys,pxs,pys = update_positions(xs,ys,pxs,pys,circle_box,box_size,delta_t,edge_collisions)
+		if fortran:
+			fortran_update_positions(xs,ys,pxs,pys,circle_box,box_size,delta_t,edge_collisions,N)
+		else:
+			xs,ys,pxs,pys = numba_update_positions(xs,ys,pxs,pys,circle_box,box_size,delta_t,edge_collisions)
 
 		#Update the plot labels
 		if physical:
