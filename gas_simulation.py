@@ -231,12 +231,17 @@ if __name__ == '__main__':
 		xs = np.random.normal(x0,sx,N)
 		ys = np.random.normal(y0,sy,N)
 	#draw velocities from Maxwell-Boltzmann distribution
-	conditions = [cycle([T]), cycle([m]), cycle([kB])]
-	vs = mp.Pool().starmap(maxwell_boltzmann_inverse,zip(np.random.random(N), *conditions))
-	#randomize velocity direction
-	theta = np.random.random(N)*2*np.pi
-	pxs = vs*np.cos(theta)
-	pys = vs*np.sin(theta)
+	if fortran:
+		from gaslib import draw_from_maxwell_boltzmann
+		pxs, pys = draw_from_maxwell_boltzmann(T,m,kB,N,tol=1e-8)
+
+	else:
+		conditions = [cycle([T]), cycle([m]), cycle([kB])]
+		vs = mp.Pool().starmap(maxwell_boltzmann_inverse,zip(np.random.random(N), *conditions))
+		#randomize velocity direction
+		theta = np.random.random(N)*2*np.pi
+		pxs = vs*np.cos(theta)
+		pys = vs*np.sin(theta)
 	
 	#--- GUI initialization ---
 	fig, ax = plt.subplots()
@@ -261,11 +266,14 @@ if __name__ == '__main__':
 		Updates the plot with new positions for all particles
 		"""
 
-		global xs, ys, pxs, pys, box_size, delta_t, circle_box, animate_stats, edge_collisions, fortran, N
+		global xs, ys, pxs, pys, box_size, delta_t, circle_box, animate_stats, edge_collisions, fortran, N, verbose, frames
+
+		if verbose:
+			print("\rFrame "+str(i)+"/"+str(frames)+",\t\t"+str(i/frames)[:3]+"%",end="")
 
 		#Move every particle
 		if fortran:
-			fortran_update_positions(xs,ys,pxs,pys,circle_box,box_size,delta_t,edge_collisions,N)
+			fortran_update_positions(xs,ys,pxs,pys,circle_box,box_size,delta_t,edge_collisions)
 		else:
 			xs,ys,pxs,pys = numba_update_positions(xs,ys,pxs,pys,circle_box,box_size,delta_t,edge_collisions)
 
@@ -286,7 +294,10 @@ if __name__ == '__main__':
 	#--- Start simulation ---
 	ani = matplotlib.animation.FuncAnimation(fig,update_plot,interval=delay,save_count=frames)
 	if verbose:
-		print("Compiling and running simulation")
+		if fortran:
+			print("Running simulation")
+		else:
+			print("Compiling and running simulation")
 	if frames > 0:
 		ani.save("gas_simulation.mp4",writer=matplotlib.animation.FFMpegWriter(fps=fps,bitrate=3600))
 	else:
