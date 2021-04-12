@@ -269,7 +269,7 @@ if __name__ == '__main__':
 		global xs, ys, pxs, pys, box_size, delta_t, circle_box, animate_stats, edge_collisions, fortran, N, verbose, frames
 
 		if verbose:
-			print("\rFrame "+str(i)+"/"+str(frames)+",\t\t"+str(i/frames)[:3]+"%",end="")
+			print("\rFrame "+str(i)+"/"+str(frames)+",\t\t"+str(100*i/frames)[:3]+"%",end="")
 
 		#Move every particle
 		if fortran:
