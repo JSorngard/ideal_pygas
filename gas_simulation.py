@@ -117,10 +117,26 @@ def numba_update_positions(xs,ys,pxs,pys,circle_box,box_size,delta_t,edge_collis
 
 	return xs,ys,pxs,pys
 
+class bcolors:
+	"""
+	Contains variables that can be used in formatted strings to
+	e.g. change the colour of the text.
+	"""
+	HEADER = '\033[95m'
+	OKBLUE = '\033[94m'
+	OKCYAN = '\033[96m'
+	OKGREEN = '\033[92m'
+	WARNING = '\033[93m'
+	FAIL = '\033[91m'
+	ENDC = '\033[0m'
+	BOLD = '\033[1m'
+	UNDERLINE = '\033[4m'
+
 if __name__ == '__main__':
 	import matplotlib.pyplot as plt
 	import matplotlib.animation
 	import argparse
+	import os
 
 	#--- Simulation parameters ---
 	N = 1000 								#Number of particles.
@@ -141,6 +157,8 @@ if __name__ == '__main__':
 	physical_time_scale = 1e-3				#If physical values are used, the time variable is in these units.
 	physical_mass_scale = 1.66053904e-27	#If physical values are used, the mass variable is in these units.
 	fps = 24								#The number of frames per second in the saved animation
+	filename = "gas_simulation"				#The name of the output file
+	ext = ".mp4"
 
 	#--- Read in user given parameter values ---
 	parser = argparse.ArgumentParser(description="Simulates a box filled with ideal gas.")
@@ -156,6 +174,7 @@ if __name__ == '__main__':
 	parser.add_argument("-d",required=False,type=int,default=delay,help=f"The delay in microseconds between finishing one time step and beginning to work on another. Defaults to {delay}.")
 	parser.add_argument("-s",required=False,type=int,default=size,help=f"The rendered size of the particles. Defaults to {size}.")
 	parser.add_argument("-a",required=False,type=float,default=alpha,help=f"The alpha value of the particles in the plot. Defaults to {alpha}.")
+	parser.add_argument("-o",required=False,type=str,default=filename,help=f"The name of the output file. Defaults to '{filename}'.")
 	parser.add_argument("-f","--frames",required=False,type=int,default=0,help=f"If present and larger than 0 the program will save that number of frames as an animation (at {fps} fps) instead of showing it in a window.")
 	parser.add_argument("--random-start",required=False,action="store_true",help="Start the particles in random positions.")
 	parser.add_argument("--physical",required=False,action="store_true",help="Use the real value of Boltzmann's constant instead of 1, alter the use of the -m flag from entering mass in kg to atomic mass units, and alter the -dt flag from entering in units of seconds to microseconds.")	
@@ -167,19 +186,25 @@ if __name__ == '__main__':
 	args = vars(parser.parse_args())
 	
 	#--- Extract and validate user input ---
+
+	#simulation parameters
 	N = args["n"]
 	delta_t = args["dt"]
-	box_size = args["l"]
 	T = args["T"]
 	m = args["m"]
 	if m <= 0:
 		raise ValueError("mass must be positive")
 	if kB <= 0:
 		raise ValueError("kB must be positive")
+
+	#initial state
+	random = args["random_start"]
 	x0, y0 = args["x0"], args["y0"]
 	sx, sy = args["sx"], args["sy"]
 	if sx <= 0 or sy <= 0:
 		raise ValueError("the standard deviation must be positive")
+
+	#animation and plotting parameters
 	delay = args["d"]
 	if delay <= 0:
 		raise ValueError("the delay must be positive")
@@ -189,6 +214,12 @@ if __name__ == '__main__':
 	alpha = args["a"]
 	if alpha < 0 or alpha > 1:
 		raise ValueError("the alpha value must be between 0 and 1")
+	frames = args["frames"]
+	if frames < 0:
+		frames = 0
+	one_unique = args["unique_particle"]
+
+	#switch units?
 	physical = args["physical"]
 	if physical:
 		kB = 1.38064852e-23
@@ -201,13 +232,27 @@ if __name__ == '__main__':
 			T = 1
 	elif T < 0:
 		raise ValueError("temperature must be positive")
-	frames = args["frames"]
-	if frames < 0:
-		frames = 0
-	random = args["random_start"]
+	
+	#io
+	filename = args["o"]
+	#Check with the user before overwriting files
+	if os.path.exists(filename+ext):
+		while True:
+			response = input(f"{bcolors.WARNING}Warning: file {filename+ext} already exists, overwite? [y/N]{bcolors.ENDC}")
+			if response.lower() == "y" or response.lower() == "yes":
+				os.remove(filename+ext)
+				break
+			elif response == "" or response.lower() == "n" or response.lower() == "no":
+				print(f"{bcolors.FAIL}Not overwriting, exiting{bcolors.ENDC}")
+				exit()
+			else:
+				print(f"Invalid option.")
+	#box
+	box_size = args["l"]
 	circle_box = args["circular"]
-	one_unique = args["unique_particle"]
 	edge_collisions = args["no_edge"]
+
+	#auxillary
 	fortran = args["fortran"]
 	verbose = args["verbose"]
 
@@ -298,6 +343,6 @@ if __name__ == '__main__':
 		else:
 			print("Compiling and running simulation")
 	if frames > 0:
-		ani.save("gas_simulation.mp4",writer=matplotlib.animation.FFMpegWriter(fps=fps,bitrate=3600))
+		ani.save(filename+ext,writer=matplotlib.animation.FFMpegWriter(fps=fps,bitrate=3600))
 	else:
 		plt.show()
