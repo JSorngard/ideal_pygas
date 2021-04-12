@@ -11,8 +11,8 @@ subroutine update_positions(xs, ys, pxs, pys, circle_box, box_size, delta_t, edg
     !f2py intent(in,out)
     real(DP), intent(in)                    :: box_size, delta_t
     logical,  intent(in)                    :: circle_box, edge_collisions
-    integer :: i, box_edge
-    real(DP) :: r, dot, nx, ny
+    integer :: i
+    real(DP) :: r, dot, nx, ny, box_edge
 
     if(edge_collisions) then
         box_edge = box_size
