@@ -157,6 +157,7 @@ if __name__ == '__main__':
 	parser.add_argument("-s",required=False,type=int,default=size,help=f"The rendered size of the particles. Defaults to {size}.")
 	parser.add_argument("-a",required=False,type=float,default=alpha,help=f"The alpha value of the particles in the plot. Defaults to {alpha}.")
 	parser.add_argument("-f","--frames",required=False,type=int,default=0,help=f"If present and larger than 0 the program will save that number of frames as an animation (at {fps} fps) instead of showing it in a window.")
+	parser.add_argument("--random-start",required=False,action="store_true",help="Start the particles in random positions.")
 	parser.add_argument("--physical",required=False,action="store_true",help="Use the real value of Boltzmann's constant instead of 1, alter the use of the -m flag from entering mass in kg to atomic mass units, and alter the -dt flag from entering in units of seconds to microseconds.")	
 	parser.add_argument("--circular",required=False,action="store_true",help="Use a circular box instead of a square.")
 	parser.add_argument("--unique-particle",required=False,action="store_true",help="Color one particle red and all others blue.")
@@ -203,6 +204,7 @@ if __name__ == '__main__':
 	frames = args["frames"]
 	if frames < 0:
 		frames = 0
+	random = args["random_start"]
 	circle_box = args["circular"]
 	one_unique = args["unique_particle"]
 	edge_collisions = args["no_edge"]
@@ -216,8 +218,18 @@ if __name__ == '__main__':
 	#draw positions from normal distribution
 	if verbose:
 		print("Generating initial state")
-	xs = np.random.normal(x0,sx,N)
-	ys = np.random.normal(y0,sy,N)
+	if random:
+		if circle_box:
+			rs = np.random.random(N)**.5*box_size
+			thetas = np.random.random(N)*2*np.pi
+			xs = rs*np.cos(thetas)
+			ys = rs*np.sin(thetas)
+		else:
+			xs = (2*np.random.random(N)-1)*box_size
+			ys = (2*np.random.random(N)-1)*box_size
+	else:
+		xs = np.random.normal(x0,sx,N)
+		ys = np.random.normal(y0,sy,N)
 	#draw velocities from Maxwell-Boltzmann distribution
 	conditions = [cycle([T]), cycle([m]), cycle([kB])]
 	vs = mp.Pool().starmap(maxwell_boltzmann_inverse,zip(np.random.random(N), *conditions))
