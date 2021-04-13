@@ -242,7 +242,7 @@ if __name__ == '__main__':
 	#io
 	filename = args["o"]
 	#Check with the user before overwriting files
-	if os.path.exists(filename+ext) and frames > 0:
+	if frames > 0 and os.path.exists(filename+ext):
 		while True:
 			response = input(f"{unicodecolor.text.WARNING}Warning: file {filename+ext} already exists, overwite? [y/N]{unicodecolor.text.ENDC}")
 			if response.lower() == "y" or response.lower() == "yes":
