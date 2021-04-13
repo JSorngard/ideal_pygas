@@ -1,4 +1,4 @@
-class TextFormatter:
+class text:
 	"""
 	Contains variables that can be used in formatted strings to
 	e.g. change the colour of the text.

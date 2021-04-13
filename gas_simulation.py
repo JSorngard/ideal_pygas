@@ -137,7 +137,7 @@ if __name__ == '__main__':
 	import matplotlib.animation
 	import argparse
 	import os
-	from format import TextFormatter as bcolors
+	import unicodecolor
 
 	#--- Simulation parameters ---
 	N = 1000 								#Number of particles.
@@ -244,12 +244,12 @@ if __name__ == '__main__':
 	#Check with the user before overwriting files
 	if os.path.exists(filename+ext) and frames > 0:
 		while True:
-			response = input(f"{bcolors.WARNING}Warning: file {filename+ext} already exists, overwite? [y/N]{bcolors.ENDC}")
+			response = input(f"{unicodecolor.text.WARNING}Warning: file {filename+ext} already exists, overwite? [y/N]{unicodecolor.text.ENDC}")
 			if response.lower() == "y" or response.lower() == "yes":
 				os.remove(filename+ext)
 				break
 			elif response == "" or response.lower() == "n" or response.lower() == "no":
-				print(f"{bcolors.FAIL}Not overwriting, exiting{bcolors.ENDC}")
+				print(f"{unicodecolor.text.FAIL}Not overwriting, exiting{unicodecolor.text.ENDC}")
 				exit()
 			else:
 				print(f"Invalid option.")
