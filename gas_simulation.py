@@ -156,9 +156,10 @@ if __name__ == '__main__':
 	physical = False						#Use physical values of kB, delta_t and m.
 	physical_time_scale = 1e-3				#If physical values are used, the time variable is in these units.
 	physical_mass_scale = 1.66053904e-27	#If physical values are used, the mass variable is in these units.
-	fps = 24								#The number of frames per second in the saved animation
-	filename = "gas_simulation"				#The name of the output file
-	ext = ".mp4"
+	fps = 24								#The number of frames per second in the saved animation.
+	filename = "gas_simulation"				#The name of the output file.
+	ext = ".mp4"							#File extension of the output file.
+	windowname = "Ideal gas simulation"		#Name of the plot window.
 
 	#--- Read in user given parameter values ---
 	parser = argparse.ArgumentParser(description="Simulates a box filled with ideal gas.")
@@ -176,6 +177,7 @@ if __name__ == '__main__':
 	parser.add_argument("-a",required=False,type=float,default=alpha,help=f"The alpha value of the particles in the plot. Defaults to {alpha}.")
 	parser.add_argument("-o",required=False,type=str,default=filename,help=f"The name of the output file. Defaults to '{filename}'.")
 	parser.add_argument("-f","--frames",required=False,type=int,default=0,help=f"If present and larger than 0 the program will save that number of frames as an animation (at {fps} fps) instead of showing it in a window.")
+	parser.add_argument("--fps",required=False,type=int,default=fps,help=f"The framerate of the output video file. Defaults to {fps}.")
 	parser.add_argument("--random-start",required=False,action="store_true",help="Start the particles in random positions.")
 	parser.add_argument("--physical",required=False,action="store_true",help="Use the real value of Boltzmann's constant instead of 1, alter the use of the -m flag from entering mass in kg to atomic mass units, and alter the -dt flag from entering in units of seconds to microseconds.")	
 	parser.add_argument("--circular",required=False,action="store_true",help="Use a circular box instead of a square.")
@@ -217,6 +219,9 @@ if __name__ == '__main__':
 	frames = args["frames"]
 	if frames < 0:
 		frames = 0
+	fps = args["fps"]
+	if fps <= 0:
+		raise ValueError("frame rate must be a positive number")
 	one_unique = args["unique_particle"]
 
 	#switch units?
@@ -289,7 +294,7 @@ if __name__ == '__main__':
 	
 	#--- GUI initialization ---
 	fig, ax = plt.subplots()
-	plt.get_current_fig_manager().set_window_title("Ideal gas simulation")
+	plt.get_current_fig_manager().set_window_title(windowname)
 	if one_unique:
 		#color the last particle red and all others blue
 		cs = np.zeros(N)
