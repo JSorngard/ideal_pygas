@@ -85,6 +85,8 @@ real*8 function inverse_maxwell_boltzmann(p,T,m,kB,tol)
     real(DP), external :: maxwell_boltzmann_cdf
     real(DP) :: left, right, mid, px, fm, diff
 
+    inverse_maxwell_boltzmann = 0.d0
+
     !Find the range of inputs where the result could be
     left = 0.d0
     right = 0.d0
