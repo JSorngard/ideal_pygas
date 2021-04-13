@@ -241,7 +241,7 @@ if __name__ == '__main__':
 	#io
 	filename = args["o"]
 	#Check with the user before overwriting files
-	if os.path.exists(filename+ext):
+	if os.path.exists(filename+ext) and frames > 0:
 		while True:
 			response = input(f"{bcolors.WARNING}Warning: file {filename+ext} already exists, overwite? [y/N]{bcolors.ENDC}")
 			if response.lower() == "y" or response.lower() == "yes":
@@ -295,6 +295,8 @@ if __name__ == '__main__':
 	#--- GUI initialization ---
 	fig, ax = plt.subplots()
 	plt.get_current_fig_manager().set_window_title(windowname)
+	dpi = 300
+	fig.set_size_inches(3000/dpi,2000/dpi,True)
 	if one_unique:
 		#color the last particle red and all others blue
 		cs = np.zeros(N)
