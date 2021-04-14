@@ -164,7 +164,9 @@ if __name__ == '__main__':
 	parser.add_argument("-o",required=False,type=str,default=filename,help=f"The name of the output file. Defaults to '{filename}'.")
 	parser.add_argument("-f","--frames",required=False,type=int,default=0,help=f"If present and larger than 0 the program will save that number of frames as an animation (at {fps} fps) instead of showing it in a window.")
 	parser.add_argument("--fps",required=False,type=int,default=fps,help=f"The framerate of the output video file. Defaults to {fps}.")
-	parser.add_argument("--random-start",required=False,action="store_true",help="Start the particles in random positions.")
+	start_location_group = parser.add_mutually_exclusive_group(required=False)
+	start_location_group.add_argument("--random-start",required=False,action="store_true",help="Start the particles in random positions.")
+	start_location_group.add_argument("--same-start",required=False,action="store_true",help="Start all particles in the position specified by -x0 and -y0.")
 	parser.add_argument("--physical",required=False,action="store_true",help="Use the real value of Boltzmann's constant instead of 1, alter the use of the -m flag from entering mass in kg to atomic mass units, and alter the -dt flag from entering in units of seconds to microseconds.")	
 	parser.add_argument("--circular",required=False,action="store_true",help="Use a circular box instead of a square.")
 	parser.add_argument("--unique-particle",required=False,action="store_true",help="Color one particle red and all others blue.")
@@ -187,6 +189,7 @@ if __name__ == '__main__':
 
 	#initial state
 	random = args["random_start"]
+	same = args["same_start"]
 	x0, y0 = args["x0"], args["y0"]
 	sx, sy = args["sx"], args["sy"]
 	if sx <= 0 or sy <= 0:
@@ -267,6 +270,9 @@ if __name__ == '__main__':
 		else:
 			xs = (2*np.random.random(N)-1)*box_size
 			ys = (2*np.random.random(N)-1)*box_size
+	elif same:
+		xs = x0*np.ones(N)
+		ys = y0*np.ones(N)
 	else:
 		xs = np.random.normal(x0,sx,N)
 		ys = np.random.normal(y0,sy,N)
