@@ -248,7 +248,7 @@ if __name__ == '__main__':
 	verbose = args["verbose"]
 
 	if fortran:
-		from lib import gaslib
+		import gaslib
 		fortran_update_positions = gaslib.update_positions
 
 	#--- Initial conditions ---
