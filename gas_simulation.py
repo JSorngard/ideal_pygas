@@ -202,6 +202,9 @@ if __name__ == '__main__':
 	alpha = args["a"]
 	if alpha < 0 or alpha > 1:
 		raise ValueError("the alpha value must be between 0 and 1")
+	if alpha < 1/255:
+		alpha = 1/255
+		print(f"{unicodecolor.text.WARNING}Given alpha value lower than lowest value of 1/255, setting to 1/255{unicodecolor.text.ENDC}")
 	frames = args["frames"]
 	if frames < 0:
 		frames = 0
