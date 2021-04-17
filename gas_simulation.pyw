@@ -165,8 +165,9 @@ if __name__ == '__main__':
 	parser.add_argument("-f","--frames",required=False,type=int,default=0,help=f"If present and larger than 0 the program will save that number of frames as an animation (at {fps} fps) instead of showing it in a window.")
 	parser.add_argument("--fps",required=False,type=int,default=fps,help=f"The framerate of the output video file. Defaults to {fps}.")
 	start_location_group = parser.add_mutually_exclusive_group(required=False)
-	start_location_group.add_argument("--random-start",required=False,action="store_true",help="Start the particles in random positions.")
-	start_location_group.add_argument("--same-start",required=False,action="store_true",help="Start all particles in the position specified by -x0 and -y0.")
+	start_location_group.add_argument("--random-location",required=False,action="store_true",help="Start the particles in random positions.")
+	start_location_group.add_argument("--same-location",required=False,action="store_true",help="Start all particles in the position specified by -x0 and -y0.")
+	parser.add_argument("--same-speed",required=False,nargs="?",type=float,default=-1.0,const=-2.0,help="Start all particles with the same speed. Defaults to sqrt(8kT/Mpi) if no number is given.")
 	parser.add_argument("--physical",required=False,action="store_true",help="Use the real value of Boltzmann's constant instead of 1, alter the use of the -m flag from entering mass in kg to atomic mass units, and alter the -dt flag from entering in units of seconds to microseconds.")	
 	parser.add_argument("--circular",required=False,action="store_true",help="Use a circular box instead of a square.")
 	parser.add_argument("--unique-particle",required=False,action="store_true",help="Color one particle red and all others blue.")
@@ -188,8 +189,9 @@ if __name__ == '__main__':
 		raise ValueError("kB must be positive")
 
 	#initial state
-	random = args["random_start"]
-	same = args["same_start"]
+	random_location = args["random_location"]
+	same_location = args["same_location"]
+	same_speed = args["same_speed"]
 	x0, y0 = args["x0"], args["y0"]
 	sx, sy = args["sx"], args["sy"]
 	if sx <= 0 or sy <= 0:
@@ -258,11 +260,13 @@ if __name__ == '__main__':
 		fortran_update_positions = gaslib.update_positions
 
 	#--- Initial conditions ---
-	#draw positions from normal distribution
 	if verbose:
 		print("Generating initial state")
-	if random:
+
+	#generate starting positions
+	if random_location:
 		if circle_box:
+			#the **.5 is to compensate for the increase of the area of a circle as r increases
 			rs = np.random.random(N)**.5*box_size
 			thetas = np.random.random(N)*2*np.pi
 			xs = rs*np.cos(thetas)
@@ -270,22 +274,35 @@ if __name__ == '__main__':
 		else:
 			xs = (2*np.random.random(N)-1)*box_size
 			ys = (2*np.random.random(N)-1)*box_size
-	elif same:
+	elif same_location:
 		xs = x0*np.ones(N)
 		ys = y0*np.ones(N)
 	else:
+		#draw positions from normal distribution
 		xs = np.random.normal(x0,sx,N)
 		ys = np.random.normal(y0,sy,N)
-	#draw velocities from Maxwell-Boltzmann distribution
-	if fortran:
-		pxs, pys = gaslib.draw_from_maxwell_boltzmann(T,m,kB,N,tol=1e-8)
+
+	#generate starting velocities
+	vs = np.empty(N)
+	if same_speed >= 0:
+		vs = same_speed*np.ones(N)
+	elif same_speed == -2:
+		#set speed to average speed of particles in ideal gas
+		vs = np.sqrt(8*kB/(m*np.pi))*np.ones(N)
+	elif same_speed == -1:
+		#draw speeds from Maxwell-Boltzmann distribution
+		if fortran:
+			vs = gaslib.draw_from_maxwell_boltzmann(T,m,kB,N,tol=1e-8)
+		else:
+			conditions = [cycle([T]), cycle([m]), cycle([kB])]
+			vs = mp.Pool().starmap(maxwell_boltzmann_inverse,zip(np.random.random(N), *conditions))
 	else:
-		conditions = [cycle([T]), cycle([m]), cycle([kB])]
-		vs = mp.Pool().starmap(maxwell_boltzmann_inverse,zip(np.random.random(N), *conditions))
-		#randomize velocity direction
-		theta = np.random.random(N)*2*np.pi
-		pxs = vs*np.cos(theta)
-		pys = vs*np.sin(theta)
+		raise ValueError("speed must be positive")
+	
+	#randomize velocity direction
+	thetas = 2*np.pi*np.random.random(N)
+	pxs = vs*np.cos(thetas)
+	pys = vs*np.sin(thetas)
 	
 	#--- GUI initialization ---
 	fig, ax = plt.subplots()
@@ -315,7 +332,7 @@ if __name__ == '__main__':
 		global xs, ys, pxs, pys, box_size, delta_t, circle_box, animate_stats, edge_collisions, fortran, N, verbose, frames
 
 		if verbose and frames > 0:
-			print("\rFrame "+str(i)+"/"+str(frames)+",    "+str(100*i/frames)[:3]+"%",end="")
+			print("\rFrame "+str(i)+"/"+str(frames)+",    "+str(100*i/frames)[:4]+"%",end="")
 
 		#Move every particle
 		if fortran:

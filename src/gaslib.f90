@@ -129,44 +129,39 @@ real*8 function inverse_maxwell_boltzmann(p,T,m,kB,tol)
     end do
 end function inverse_maxwell_boltzmann
 
-subroutine draw_from_maxwell_boltzmann(pxs,pys,T,m,kB,tol,N)
-    !Fills up the given momentum vector with
+subroutine draw_from_maxwell_boltzmann(vs,T,m,kB,tol,N)
+    !Fills up the velocity array with
     !results drawn from the Maxwell-Boltzmann distribution.
     use omp_lib
     implicit none
     integer,  parameter                     :: DP = kind(1.d0)
-    real(DP), parameter                     :: PI = 4.d0*atan(1.d0)
     integer,  intent(in)                    :: N
-    real(DP), intent(out), dimension(N)     :: pxs, pys
+    real(DP), intent(out), dimension(N)     :: vs
     real(DP), intent(in)                    :: T, m, kB
     real(DP), intent(in), optional          :: tol
     integer :: i
-    real(DP) :: temp, tol_
+    real(DP) :: tol_
     real(DP), external :: inverse_maxwell_boltzmann
     
     tol_ = 1.d-8
     if(present(tol)) tol_ = tol
 
-    !Use the x-coordinates to store the randomly generated
-    !cumulative probabillity used to invert the distribution
-    call RANDOM_NUMBER(pxs)
+    call RANDOM_NUMBER(vs)
 
-    !$OMP parallel do shared(pxs,pys)
+    !$OMP parallel do shared(vs) if(N > 10000)
     do i = 1, N
-        !Use the y-coordinate to store the resulting velocity
-        pys(i) = inverse_maxwell_boltzmann(pxs(i),T,m,kB,tol_)
+        vs(i) = inverse_maxwell_boltzmann(vs(i),T,m,kB,tol_)
     end do
     !$OMP end parallel do
 
-    !Use x-coordinates again to store a random angle
-    call RANDOM_NUMBER(pxs)
-    pxs = pxs*2.d0*PI
+    ! call RANDOM_NUMBER(pxs)
+    ! pxs = pxs*2.d0*PI
 
-    !The velocity is now in pys and angle in pxs
-    do i = 1, N
-        temp = pys(i)*cos(pxs(i))
-        pys(i) = pys(i)*sin(pxs(i))
-        pxs(i) = temp
-    enddo
+    ! !The velocity is now in pys and angle in pxs
+    ! do i = 1, N
+    !     temp = pys(i)*cos(pxs(i))
+    !     pys(i) = pys(i)*sin(pxs(i))
+    !     pxs(i) = temp
+    ! enddo
 
 end subroutine
