@@ -143,8 +143,7 @@ if __name__ == '__main__':
 	physical_time_scale = 1e-3				#If physical values are used, the time variable is in these units.
 	physical_mass_scale = 1.66053904e-27	#If physical values are used, the mass variable is in these units.
 	fps = 24								#The number of frames per second in the saved animation.
-	filename = "gas_simulation"				#The name of the output file.
-	ext = ".mp4"							#File extension of the output file.
+	filename = "gas_simulation.mkv"				#The name of the output file.
 	windowname = "Ideal gas simulation"		#Name of the plot window.
 
 	#--- Read in user given parameter values ---
@@ -235,11 +234,11 @@ if __name__ == '__main__':
 	#io
 	filename = args["o"]
 	#Check with the user before overwriting files
-	if frames > 0 and os.path.exists(filename+ext):
+	if frames > 0 and os.path.exists(filename):
 		while True:
-			response = input(f"{unicodecolor.text.WARNING}Warning: file {filename+ext} already exists, overwite? [y/N]{unicodecolor.text.ENDC}")
+			response = input(f"{unicodecolor.text.WARNING}Warning: file {filename} already exists, overwite? [y/N]{unicodecolor.text.ENDC}")
 			if response.lower() == "y" or response.lower() == "yes":
-				os.remove(filename+ext)
+				os.remove(filename)
 				break
 			elif response == "" or response.lower() == "n" or response.lower() == "no":
 				print(f"{unicodecolor.text.FAIL}Not overwriting, exiting{unicodecolor.text.ENDC}")
@@ -362,6 +361,6 @@ if __name__ == '__main__':
 		else:
 			print("Compiling and running simulation")
 	if frames > 0:
-		ani.save(filename+ext,writer=matplotlib.animation.FFMpegWriter(fps=fps,bitrate=3600))
+		ani.save(filename,writer=matplotlib.animation.FFMpegWriter(fps=fps,bitrate=3600))
 	else:
 		plt.show()
