@@ -123,6 +123,7 @@ if __name__ == '__main__':
 	import argparse
 	import os
 	import unicodecolor
+	textformatter = unicodecolor.textformatter()
 
 	#--- Simulation parameters ---
 	N = 1000 								#Number of particles.
@@ -208,7 +209,7 @@ if __name__ == '__main__':
 		raise ValueError("the alpha value must be between 0 and 1")
 	if alpha < 1/255:
 		alpha = 1/255
-		print(f"{unicodecolor.text.WARNING}Given alpha value lower than lowest value of 1/255, setting to 1/255{unicodecolor.text.ENDC}")
+		print(textformatter.yellow("Given alpha value lower than lowest value of 1/255, setting to 1/255"))
 	frames = args["frames"]
 	if frames < 0:
 		frames = 0
@@ -236,15 +237,15 @@ if __name__ == '__main__':
 	#Check with the user before overwriting files
 	if frames > 0 and os.path.exists(filename):
 		while True:
-			response = input(f"{unicodecolor.text.WARNING}Warning: file {filename} already exists, overwite? [y/N]{unicodecolor.text.ENDC}")
+			response = input(textformatter.yellow("Warning: file {filename} already exists, overwite? [y/N]"))
 			if response.lower() == "y" or response.lower() == "yes":
 				os.remove(filename)
 				break
 			elif response == "" or response.lower() == "n" or response.lower() == "no":
-				print(f"{unicodecolor.text.FAIL}Not overwriting, exiting{unicodecolor.text.ENDC}")
+				print(textformatter.red("Not overwriting, exiting"))
 				exit()
 			else:
-				print(f"Invalid option.")
+				print("Invalid option.")
 	#box
 	box_size = args["l"]
 	circle_box = args["circular"]
